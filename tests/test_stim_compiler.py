@@ -40,8 +40,8 @@ class TestExtraction:
 
         circuit = pattern.extract_opengraph().extract_pauli_flow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
 
-        s_ref = circuit.simulate_statevector().statevec
-        s_test = circuit_ref.simulate_statevector().statevec
+        s_ref = circuit.simulate().statevec
+        s_test = circuit_ref.simulate().statevec
         assert np.abs(np.dot(s_ref.flatten().conjugate(), s_test.flatten())) == pytest.approx(1)
 
     @pytest.mark.parametrize(
@@ -136,8 +136,8 @@ class TestExtraction:
             .to_circuit(cm_cp=cm_stim_pass)
         )
 
-        state = circuit.simulate_statevector().statevec
-        state_ref = pattern.simulate_pattern()
+        state = circuit.simulate().statevec
+        state_ref = pattern.simulate()
         assert state.isclose(state_ref)
 
     def test_extract_og_gflow(self) -> None:
@@ -155,8 +155,8 @@ class TestExtraction:
         pattern = og.to_pattern()
         circuit = og.extract_gflow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
 
-        state = circuit.simulate_statevector().statevec
-        state_ref = pattern.simulate_pattern()
+        state = circuit.simulate().statevec
+        state_ref = pattern.simulate()
         assert state.isclose(state_ref)
 
     @pytest.mark.parametrize("test_case", [0.2, 0.5, 1.0])
@@ -177,10 +177,10 @@ class TestExtraction:
 
         # Substitute parameter at the level of the extracted circuit
         qc1 = flow.extract_circuit().to_circuit(cm_cp=cm_stim_pass)
-        s1 = qc1.subs(alpha, alpha_val).simulate_statevector().statevec
+        s1 = qc1.subs(alpha, alpha_val).simulate().statevec
 
         # Substitute parameter at the level of the flow object
         qc2 = flow.subs(alpha, alpha_val).extract_circuit().to_circuit(cm_cp=cm_stim_pass)
-        s2 = qc2.simulate_statevector().statevec
+        s2 = qc2.simulate().statevec
 
         assert s1.isclose(s2)
