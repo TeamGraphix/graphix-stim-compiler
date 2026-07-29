@@ -23,8 +23,8 @@ pattern = qc.transpile().pattern
 
 qc_extracted = pattern.extract_opengraph().infer_pauli_measurements().extract_pauli_flow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
 
-s_ref = qc.simulate_statevector().statevec
-s_extracted = qc_extracted.simulate_statevector().statevec
+s_ref = qc.simulate().state
+s_extracted = qc_extracted.simulate().state
 assert s_ref.isclose(s_extracted)
 ```
 
