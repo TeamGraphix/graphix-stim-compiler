@@ -37,6 +37,7 @@ class TestExtraction:
         depth = 2
         circuit_ref = rand_circuit(nqubits, depth, rng, use_ccx=False)
         pattern = circuit_ref.transpile().pattern
+        pattern.infer_pauli_measurements()
 
         circuit = pattern.to_opengraph().to_pauliflow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
 
@@ -126,7 +127,7 @@ class TestExtraction:
             ),
         ],
     )
-    def test_extract_og(self, test_case: OpenGraph[Measurement]) -> None:
+    def test_extract_og(self, fx_rng: Generator, test_case: OpenGraph[Measurement]) -> None:
         pattern = test_case.to_pattern()
         circuit = (
             pattern.to_opengraph()
@@ -137,10 +138,10 @@ class TestExtraction:
         )
 
         state = circuit.simulate().state
-        state_ref = pattern.simulate()
+        state_ref = pattern.simulate(rng=fx_rng)
         assert state.isclose(state_ref)
 
-    def test_extract_og_gflow(self) -> None:
+    def test_extract_og_gflow(self, fx_rng: Generator) -> None:
         og = OpenGraph(
             graph=nx.Graph([(1, 3), (2, 4), (3, 4), (3, 5), (4, 6)]),
             input_nodes=[1, 2],
@@ -156,10 +157,11 @@ class TestExtraction:
         circuit = og.to_gflow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
 
         state = circuit.simulate().state
-        state_ref = pattern.simulate()
+        state_ref = pattern.simulate(rng=fx_rng)
         assert state.isclose(state_ref)
 
     @pytest.mark.parametrize("test_case", [0.2, 0.5, 1.0])
+    @pytest.mark.filterwarnings("ignore:Open graph with non-inferred Pauli measurements.")
     def test_parametric_angles(self, test_case: float) -> None:
         alpha = Placeholder("alpha")
         alpha_val = test_case
