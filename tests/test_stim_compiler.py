@@ -37,11 +37,12 @@ class TestExtraction:
         depth = 2
         circuit_ref = rand_circuit(nqubits, depth, rng, use_ccx=False)
         pattern = circuit_ref.transpile().pattern
+        pattern.infer_pauli_measurements()
 
-        circuit = pattern.extract_opengraph().extract_pauli_flow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
+        circuit = pattern.to_opengraph().to_pauliflow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
 
-        s_ref = circuit.simulate_statevector().statevec
-        s_test = circuit_ref.simulate_statevector().statevec
+        s_ref = circuit.simulate().state
+        s_test = circuit_ref.simulate().state
         assert np.abs(np.dot(s_ref.flatten().conjugate(), s_test.flatten())) == pytest.approx(1)
 
     @pytest.mark.parametrize(
@@ -126,21 +127,21 @@ class TestExtraction:
             ),
         ],
     )
-    def test_extract_og(self, test_case: OpenGraph[Measurement]) -> None:
+    def test_extract_og(self, fx_rng: Generator, test_case: OpenGraph[Measurement]) -> None:
         pattern = test_case.to_pattern()
         circuit = (
-            pattern.extract_opengraph()
+            pattern.to_opengraph()
             .infer_pauli_measurements()
-            .extract_pauli_flow()
+            .to_pauliflow()
             .extract_circuit()
             .to_circuit(cm_cp=cm_stim_pass)
         )
 
-        state = circuit.simulate_statevector().statevec
-        state_ref = pattern.simulate_pattern()
+        state = circuit.simulate().state
+        state_ref = pattern.simulate(rng=fx_rng)
         assert state.isclose(state_ref)
 
-    def test_extract_og_gflow(self) -> None:
+    def test_extract_og_gflow(self, fx_rng: Generator) -> None:
         og = OpenGraph(
             graph=nx.Graph([(1, 3), (2, 4), (3, 4), (3, 5), (4, 6)]),
             input_nodes=[1, 2],
@@ -153,13 +154,14 @@ class TestExtraction:
             },
         )
         pattern = og.to_pattern()
-        circuit = og.extract_gflow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
+        circuit = og.to_gflow().extract_circuit().to_circuit(cm_cp=cm_stim_pass)
 
-        state = circuit.simulate_statevector().statevec
-        state_ref = pattern.simulate_pattern()
+        state = circuit.simulate().state
+        state_ref = pattern.simulate(rng=fx_rng)
         assert state.isclose(state_ref)
 
     @pytest.mark.parametrize("test_case", [0.2, 0.5, 1.0])
+    @pytest.mark.filterwarnings("ignore:Open graph with non-inferred Pauli measurements.")
     def test_parametric_angles(self, test_case: float) -> None:
         alpha = Placeholder("alpha")
         alpha_val = test_case
@@ -173,14 +175,14 @@ class TestExtraction:
                 3: Measurement.XY(0.3),
                 4: Measurement.XY(alpha),
             },
-        ).extract_pauli_flow()
+        ).to_pauliflow()
 
         # Substitute parameter at the level of the extracted circuit
         qc1 = flow.extract_circuit().to_circuit(cm_cp=cm_stim_pass)
-        s1 = qc1.subs(alpha, alpha_val).simulate_statevector().statevec
+        s1 = qc1.subs(alpha, alpha_val).simulate().state
 
         # Substitute parameter at the level of the flow object
         qc2 = flow.subs(alpha, alpha_val).extract_circuit().to_circuit(cm_cp=cm_stim_pass)
-        s2 = qc2.simulate_statevector().statevec
+        s2 = qc2.simulate().state
 
         assert s1.isclose(s2)
