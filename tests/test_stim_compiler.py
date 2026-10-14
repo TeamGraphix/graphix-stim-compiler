@@ -127,6 +127,7 @@ class TestExtraction:
             ),
         ],
     )
+    @pytest.mark.filterwarnings("ignore:Non-Pauli measurement on an isolated node was removed.")
     def test_extract_og(self, fx_rng: Generator, test_case: OpenGraph[Measurement]) -> None:
         pattern = test_case.to_pattern()
         circuit = (
